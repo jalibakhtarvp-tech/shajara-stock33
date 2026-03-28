@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Shajara · Stock Take</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{--bg:#0f0e0c;--surface:#1a1814;--surface2:#242018;--border:#2e2a22;--gold:#c8a86b;--gold-dim:#8a7048;--gold-glow:rgba(200,168,107,0.12);--text:#f0ead8;--text-dim:#8a8070;--text-muted:#504840;--red:#d45a4a;--green:#6aad7a;--purple:#9b7fd4;--radius:14px;--radius-sm:8px;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;top:-40%;left:-20%;width:140%;height:80%;background:radial-gradient(ellipse at 60% 40%,rgba(200,168,107,0.06) 0%,transparent 70%);pointer-events:none;z-index:0;}
+  .screen{display:none;min-height:100dvh;padding:0 0 90px;position:relative;z-index:1;}
+  .screen.active{display:flex;flex-direction:column;}
+  .header{padding:52px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);background:rgba(15,14,12,0.9);}
+  .brand{display:flex;align-items:center;gap:9px;margin-bottom:2px;}
+  .brand-mark{width:29px;height:29px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .brand-name{font-size:16px;font-weight:800;letter-spacing:0.08em;color:var(--gold);text-transform:uppercase;}
+  .screen-title{font-size:11px;color:var(--text-dim);letter-spacing:0.04em;}
+  .back-btn{display:flex;align-items:center;gap:5px;background:none;border:none;color:var(--gold-dim);font-family:'Syne',sans-serif;font-size:12px;cursor:pointer;padding:0;margin-bottom:9px;}
+  .content{padding:18px;flex:1;}
+  .section-label{font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:9px;}
+  .welcome-text{font-size:22px;font-weight:800;line-height:1.2;margin-bottom:3px;}
+  .welcome-text span{color:var(--gold);}
+  .welcome-sub{font-size:11px;color:var(--text-dim);margin-bottom:20px;}
+  .master-status-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;}
+  .master-status-left{display:flex;align-items:center;gap:9px;}
+  .master-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);flex-shrink:0;transition:background 0.3s;}
+  .master-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .master-dot.loading{background:var(--gold);animation:pulse 0.9s infinite;}
+  .master-dot.error{background:var(--red);}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
+  .master-status-text{font-size:12px;font-weight:600;}
+  .master-status-sub{font-size:10px;color:var(--text-dim);margin-top:1px;}
+  .refresh-btn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--gold-dim);font-family:'Syne',sans-serif;font-size:11px;cursor:pointer;}
+  .refresh-btn:active{background:var(--surface2);}
+  .branch-grid{display:flex;flex-direction:column;gap:7px;margin-bottom:22px;}
+  .branch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
+  .branch-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);border-radius:3px 0 0 3px;opacity:0;transition:opacity 0.15s;}
+  .branch-card:active{background:var(--surface2);transform:scale(0.98);}
+  .branch-card:active::before{opacity:1;}
+  .branch-name{font-size:14px;font-weight:700;margin-bottom:2px;}
+  .branch-location{font-size:11px;color:var(--text-dim);}
+  .branch-arrow{width:28px;height:28px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold-dim);font-size:14px;flex-shrink:0;}
+  .branch-badge{display:inline-flex;align-items:center;gap:5px;background:var(--gold-glow);border:1px solid var(--gold-dim);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:600;color:var(--gold);margin-bottom:14px;}
+  .action-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px;}
+  .action-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all 0.15s;color:var(--text);font-family:'Syne',sans-serif;}
+  .action-btn:active{background:var(--surface2);transform:scale(0.97);}
+  .action-btn.primary{background:var(--gold);border-color:var(--gold);color:#1a1408;}
+  .action-btn.primary:active{background:#b8982e;}
+  .action-btn.plu{background:rgba(155,127,212,0.1);border-color:var(--purple);color:var(--purple);}
+  .action-btn.plu:active{background:rgba(155,127,212,0.2);}
+  .action-btn-icon{font-size:20px;}
+  .action-btn-label{font-size:10px;font-weight:700;letter-spacing:0.04em;}
+  .plu-panel{background:rgba(155,127,212,0.07);border:1px solid var(--purple);border-radius:var(--radius);padding:13px;margin-bottom:10px;display:none;}
+  .plu-panel.visible{display:block;}
+  .plu-panel-title{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:9px;}
+  .manual-add{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px;margin-bottom:10px;display:none;flex-direction:column;gap:7px;}
+  .manual-add.visible{display:flex;}
+  .input-row{display:flex;gap:7px;}
+  .input-field{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;font-family:'Syne',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color 0.15s;}
+  .input-field:focus{border-color:var(--gold-dim);}
+  .input-field::placeholder{color:var(--text-muted);}
+  .input-field.small{width:68px;flex:none;}
+  .add-confirm-btn{background:var(--gold);border:none;border-radius:var(--radius-sm);padding:9px 13px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#1a1408;cursor:pointer;white-space:nowrap;}
+  .add-confirm-btn:active{background:#b8982e;}
+  .search-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px;display:flex;align-items:center;gap:9px;margin-bottom:9px;transition:border-color 0.15s;}
+  .search-box:focus-within{border-color:var(--gold-dim);}
+  .search-box input{flex:1;background:none;border:none;outline:none;font-family:'Syne',sans-serif;font-size:13px;color:var(--text);}
+  .search-box input::placeholder{color:var(--text-muted);}
+  .search-clear{background:none;border:none;color:var(--text-muted);font-size:17px;cursor:pointer;padding:0;line-height:1;display:none;}
+  .search-results{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:9px;display:none;max-height:260px;overflow-y:auto;}
+  .search-results.visible{display:block;}
+  .search-result-item{padding:11px 13px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background 0.1s;}
+  .search-result-item:last-child{border-bottom:none;}
+  .search-result-item:active{background:var(--surface2);}
+  .result-name{font-size:13px;font-weight:600;}
+  .result-meta{font-size:10px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-top:2px;display:flex;gap:6px;flex-wrap:wrap;}
+  .result-tag{background:var(--surface2);border-radius:3px;padding:1px 5px;}
+  .result-tag.plu{background:rgba(155,127,212,0.15);color:var(--purple);}
+  .result-add-icon{color:var(--gold);font-size:19px;flex-shrink:0;}
+  .items-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+  .item-count-badge{background:var(--gold-glow);border:1px solid var(--gold-dim);border-radius:20px;padding:2px 9px;font-size:10px;font-weight:700;color:var(--gold);font-family:'DM Mono',monospace;}
+  .items-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .item-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:11px 12px;display:flex;align-items:center;gap:9px;animation:slideIn 0.15s ease;}
+  .item-card.loose{border-left:3px solid var(--purple);}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+  .item-info{flex:1;min-width:0;}
+  .item-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .item-sub{font-size:9px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:2px;display:flex;gap:5px;flex-wrap:wrap;}
+  .item-sub .tag{background:var(--surface2);border-radius:3px;padding:1px 4px;}
+  .item-sub .tag.plu{background:rgba(155,127,212,0.15);color:var(--purple);}
+  .item-qty{font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--gold);min-width:32px;text-align:right;flex-shrink:0;}
+  .delete-btn{width:26px;height:26px;background:none;border:1px solid transparent;border-radius:6px;color:var(--text-muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+  .delete-btn:active{color:var(--red);border-color:var(--red);background:rgba(212,90,74,0.1);}
+
+  /* Qty modal */
+  .qty-modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:150;align-items:flex-end;justify-content:center;}
+  .qty-modal-backdrop.active{display:flex;}
+  .qty-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;padding:22px 20px 36px;width:100%;max-width:420px;}
+  .qty-modal-product{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .qty-modal-meta{font-size:10px;color:var(--text-dim);font-family:'DM Mono',monospace;margin-bottom:16px;}
+  .qty-modal-label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:7px;}
+  .qty-modal-input{width:100%;background:var(--surface2);border:1px solid var(--gold-dim);border-radius:var(--radius-sm);padding:13px 14px;font-family:'DM Mono',monospace;font-size:22px;font-weight:600;color:var(--gold);outline:none;text-align:center;margin-bottom:12px;}
+  .qty-modal-input:focus{border-color:var(--gold);}
+  .qty-modal-row{display:grid;grid-template-columns:1fr 2fr;gap:8px;}
+  .qty-modal-cancel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text-dim);cursor:pointer;}
+  .qty-modal-confirm{background:var(--gold);border:none;border-radius:var(--radius-sm);padding:13px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#1a1408;cursor:pointer;}
+  .qty-modal-confirm:active{background:#b8982e;}
+  .qty-modal-notes{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:'Syne',sans-serif;font-size:13px;color:var(--text);outline:none;resize:none;height:44px;line-height:1.4;margin-bottom:12px;transition:border-color 0.15s;}
+  .qty-modal-notes:focus{border-color:var(--gold-dim);}
+  .qty-modal-notes::placeholder{color:var(--text-muted);}
+  .item-notes{font-size:10px;color:var(--text-muted);margin-top:3px;font-style:italic;}
+
+  .scanner-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:100;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+  .scanner-overlay.active{display:flex;}
+  #scanner-container{width:100%;max-width:310px;border-radius:var(--radius);overflow:hidden;border:2px solid var(--gold);box-shadow:0 0 40px rgba(200,168,107,0.25);}
+  .scanner-hint{font-size:12px;color:var(--text-dim);margin-top:14px;text-align:center;line-height:1.6;}
+  .scanner-last{font-size:12px;color:var(--gold);margin-top:8px;text-align:center;font-family:'DM Mono',monospace;min-height:20px;font-weight:600;}
+  .scanner-close{margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 30px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+  .sync-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+  .sync-card-title{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .sync-card-desc{font-size:11px;color:var(--text-dim);margin-bottom:12px;line-height:1.6;}
+  .summary-table{width:100%;border-collapse:collapse;font-size:11px;}
+  .summary-table th{text-align:left;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);padding:5px 0;border-bottom:1px solid var(--border);font-weight:600;}
+  .summary-table td{padding:8px 0;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+  .summary-table td:last-child{text-align:right;font-family:'DM Mono',monospace;color:var(--gold);font-weight:500;}
+  .summary-table tr:last-child td{border-bottom:none;}
+  .cat-label{font-size:9px;color:var(--text-muted);display:block;margin-top:1px;}
+  .full-btn{width:100%;background:var(--gold);border:none;border-radius:var(--radius-sm);padding:13px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#1a1408;cursor:pointer;transition:background 0.15s;display:flex;align-items:center;justify-content:center;gap:7px;}
+  .full-btn:active{background:#b8982e;}
+  .full-btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+  .full-btn.secondary:active{background:var(--border);}
+  .full-btn.danger{background:rgba(212,90,74,0.1);color:var(--red);border:1px solid rgba(212,90,74,0.4);}
+  .full-btn.danger:active{background:rgba(212,90,74,0.25);}
+  .sync-status{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-dim);margin-top:9px;}
+  .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);}
+  .sync-dot.connected{background:var(--green);box-shadow:0 0 5px var(--green);}
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(15,14,12,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom);}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 8px;cursor:pointer;background:none;border:none;color:var(--text-muted);font-family:'Syne',sans-serif;font-size:9px;font-weight:600;letter-spacing:0.06em;transition:color 0.15s;}
+  .nav-item.active{color:var(--gold);}
+  .nav-icon{font-size:18px;}
+  .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 16px;font-size:12px;font-weight:600;color:var(--text);z-index:200;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .toast.success{border-color:var(--green);}
+  .toast.error{border-color:var(--red);}
+  .empty-state{text-align:center;padding:36px 20px;color:var(--text-muted);}
+  .empty-icon{font-size:34px;margin-bottom:9px;opacity:0.5;}
+  .empty-text{font-size:13px;font-weight:600;margin-bottom:3px;}
+  .empty-sub{font-size:10px;}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div class="screen active" id="screen-home">
+  <div class="header">
+    <div class="brand"><div class="brand-mark">🌳</div><div class="brand-name">Shajara</div></div>
+    <div class="screen-title">Stock Take System</div>
+  </div>
+  <div class="content">
+    <div class="welcome-text">Select a <span>Branch</span></div>
+    <div class="welcome-sub">Product list loads automatically on open</div>
+    <div class="master-status-card">
+      <div class="master-status-left">
+        <div class="master-dot loading" id="master-dot"></div>
+        <div>
+          <div class="master-status-text" id="master-status-text">Loading products...</div>
+          <div class="master-status-sub" id="master-status-sub">Connecting to Google Sheets</div>
+        </div>
+      </div>
+      <button class="refresh-btn" onclick="loadProductMaster()">↻ Retry</button>
+    </div>
+    <div class="section-label">Branches</div>
+    <div class="branch-grid">
+      <div class="branch-card" onclick="selectBranch('Edappal')">
+        <div><div class="branch-name">Edappal</div><div class="branch-location">Emirates Mall, Calicut Road</div></div>
+        <div class="branch-arrow">›</div>
+      </div>
+      <div class="branch-card" onclick="selectBranch('Pattambi')">
+        <div><div class="branch-name">Pattambi</div><div class="branch-location"></div></div>
+        <div class="branch-arrow">›</div>
+      </div>
+      <div class="branch-card" onclick="selectBranch('Ottapalam')">
+        <div><div class="branch-name">Ottapalam</div><div class="branch-location"></div></div>
+        <div class="branch-arrow">›</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COUNT -->
+<div class="screen" id="screen-count">
+  <div class="header">
+    <button class="back-btn" onclick="goHome()">‹ Change Branch</button>
+    <div class="brand"><div class="brand-mark">🌳</div><div class="brand-name">Shajara</div></div>
+    <div class="screen-title">Stock Count</div>
+  </div>
+  <div class="content">
+    <div class="branch-badge" id="active-branch-badge">📍 Branch</div>
+    <div class="action-row">
+      <button class="action-btn primary" onclick="openScanner()">
+        <span class="action-btn-icon">📷</span><span class="action-btn-label">Scan Barcode</span>
+      </button>
+      <button class="action-btn plu" onclick="togglePLU()">
+        <span class="action-btn-icon">🔢</span><span class="action-btn-label">Commodity Code</span>
+      </button>
+    </div>
+    <div style="margin-bottom:12px">
+      <button class="action-btn" style="width:100%;flex-direction:row;gap:8px;padding:10px 14px;justify-content:center" onclick="toggleManualAdd()">
+        <span class="action-btn-icon" style="font-size:15px">✏️</span><span class="action-btn-label">Add Unknown Item</span>
+      </button>
+    </div>
+    <div class="plu-panel" id="plu-panel">
+      <div class="plu-panel-title">🔢 Commodity Code — Loose / Weighed</div>
+      <input class="input-field" id="plu-input" placeholder="Type commodity code..." style="width:100%;margin-bottom:8px" oninput="onPLUInput(this.value)" />
+      <div id="plu-results"></div>
+    </div>
+    <div class="manual-add" id="manual-add-panel">
+      <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.08em">Unknown / Unlisted Item</div>
+      <input class="input-field" id="manual-name" placeholder="Product name" />
+      <div class="input-row">
+        <input class="input-field" id="manual-barcode" placeholder="Barcode (optional)" />
+        <input class="input-field small" id="manual-qty" type="number" placeholder="Qty" step="0.001" min="0.001" value="1"/>
+      </div>
+      <button class="add-confirm-btn" onclick="addManualItem()">+ Add Row</button>
+    </div>
+    <div class="search-box">
+      <span style="color:var(--text-muted);font-size:14px">🔍</span>
+      <input type="text" placeholder="Search name, barcode, auto barcode..." id="search-input" oninput="onSearchInput(this.value)" />
+      <button class="search-clear" id="search-clear" onclick="clearSearch()">×</button>
+    </div>
+    <div class="search-results" id="search-results"></div>
+    <div class="items-header">
+      <div class="section-label" style="margin:0">Counted Rows</div>
+      <div class="item-count-badge" id="item-count-badge">0 rows</div>
+    </div>
+    <div class="items-list" id="items-list">
+      <div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">No items yet</div><div class="empty-sub">Scan a barcode or search to begin</div></div>
+    </div>
+    <button class="full-btn" onclick="goToSync()">📤 &nbsp;Review & Export</button>
+  </div>
+</div>
+
+<!-- SYNC -->
+<div class="screen" id="screen-sync">
+  <div class="header">
+    <button class="back-btn" onclick="goToCount()">‹ Back to Count</button>
+    <div class="brand"><div class="brand-mark">🌳</div><div class="brand-name">Shajara</div></div>
+    <div class="screen-title">Review & Export</div>
+  </div>
+  <div class="content">
+    <div class="sync-card">
+      <div class="sync-card-title">📋 Session Summary</div>
+      <div class="sync-card-desc" id="sync-summary-text">—</div>
+      <table class="summary-table">
+        <thead><tr><th>Product</th><th>Group</th><th style="text-align:right">Qty</th></tr></thead>
+        <tbody id="sync-table-body"></tbody>
+      </table>
+    </div>
+    <div class="sync-card">
+      <div class="sync-card-title">📊 Export to Google Sheets</div>
+      <div class="sync-card-desc">Each scan is a separate row. Your back-end team consolidates by barcode.</div>
+      <div class="sync-status"><div class="sync-dot connected"></div><span>Google Sheets connected</span></div>
+    </div>
+    <button class="full-btn" onclick="exportToSheets()" style="margin-bottom:9px">📤 &nbsp;Send to Google Sheets</button>
+    <button class="full-btn secondary" onclick="downloadCSV()" style="margin-bottom:9px">⬇️ &nbsp;Download CSV</button>
+    <button class="full-btn danger" onclick="clearSession()">🗑 &nbsp;Clear This Session</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" id="nav-home" onclick="goHome()"><span class="nav-icon">🏠</span>Branch</button>
+  <button class="nav-item" id="nav-count" onclick="goToCount()"><span class="nav-icon">📦</span>Count</button>
+  <button class="nav-item" id="nav-sync" onclick="goToSync()"><span class="nav-icon">📤</span>Export</button>
+</div>
+
+<!-- SCANNER -->
+<div class="scanner-overlay" id="scanner-overlay">
+  <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;text-align:center;letter-spacing:0.06em;font-weight:700;text-transform:uppercase">Camera stays open — scan continuously</div>
+  <div id="scanner-container"></div>
+  <div class="scanner-hint">Each scan = new row &nbsp;·&nbsp; EAN-13 · Code128 · Auto Barcode</div>
+  <div class="scanner-last" id="scanner-last"></div>
+  <button class="scanner-close" onclick="closeScanner()">Done Scanning</button>
+</div>
+
+<!-- QTY MODAL -->
+<div class="qty-modal-backdrop" id="qty-modal-backdrop">
+  <div class="qty-modal">
+    <div class="qty-modal-product" id="qty-modal-name">Product</div>
+    <div class="qty-modal-meta" id="qty-modal-meta"></div>
+    <div class="qty-modal-label">Quantity</div>
+    <input class="qty-modal-input" id="qty-modal-input" type="number" min="0.001" step="1" value="1" inputmode="decimal" />
+    <div class="qty-modal-label">Shelf / Notes <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+    <textarea class="qty-modal-notes" id="qty-modal-notes" placeholder="e.g. Shelf A2, top rack, cold storage left…"></textarea>
+    <div class="qty-modal-row">
+      <button class="qty-modal-cancel" onclick="cancelQtyModal()">Cancel</button>
+      <button class="qty-modal-confirm" onclick="confirmQtyModal()">✓ Add Row</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxjISeCSiloHD6YEmzJWa3BUz-tSWSmD9xRqqPi0KziFwXVSzHtU8m2mFH-i2Kjd2VrLA/exec';
+const COL = { name:'Product', barcode:'Mannual Barcode', autoBarcode:'Auto Barcode', plu:'Commodity Code', category:'Group Name', unit:'Unit Qty' };
+
+let products = [];
+let items = [];
+let activeBranch = null;
+let scanner = null, scannerActive = false, scanCooldown = false;
+
+window.addEventListener('DOMContentLoaded', () => {
+  items = JSON.parse(localStorage.getItem('shajara_items') || '[]');
+  loadProductMaster();
+});
+
+async function loadProductMaster() {
+  setStatus('loading','Loading products...','Connecting to Google Sheets');
+  try {
+    const res = await fetch(SCRIPT_URL);
+    const data = await res.json();
+    products = (data.products || []).map(r => ({
+      name:        String(r[COL.name]        || '').trim(),
+      barcode:     String(r[COL.barcode]     || '').trim(),
+      autoBarcode: String(r[COL.autoBarcode] || '').trim(),
+      plu:         String(r[COL.plu]         || '').trim(),
+      category:    String(r[COL.category]    || '').trim(),
+      unit:        String(r[COL.unit]        || '').trim(),
+      isLoose:     !!(r[COL.plu] && String(r[COL.plu]).trim())
+    })).filter(p => p.name);
+    setStatus('ok', products.length + ' products ready', 'Select a branch to begin');
+  } catch(e) {
+    setStatus('error','Could not load products','Check internet — tap Retry');
+  }
+}
+
+function setStatus(type, text, sub) {
+  document.getElementById('master-dot').className = 'master-dot ' + type;
+  document.getElementById('master-status-text').textContent = text;
+  document.getElementById('master-status-sub').textContent = sub;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  var map = {home:'nav-home',count:'nav-count',sync:'nav-sync'};
+  var nav = document.getElementById(map[id]);
+  if (nav) nav.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function goHome() { closeScanner(); showScreen('home'); }
+function goToCount() {
+  if (!activeBranch) { showToast('Select a branch first','error'); return; }
+  renderItems(); showScreen('count');
+}
+function goToSync() { renderSyncSummary(); showScreen('sync'); }
+function selectBranch(name) {
+  activeBranch = name;
+  document.getElementById('active-branch-badge').textContent = '📍 ' + name;
+  renderItems(); showScreen('count');
+}
+
+function searchProducts(q) {
+  if (!q.trim() || !products.length) return [];
+  var ql = q.toLowerCase();
+  return products.filter(function(p) {
+    return p.name.toLowerCase().includes(ql) ||
+      (p.barcode && p.barcode.toLowerCase().includes(ql)) ||
+      (p.autoBarcode && p.autoBarcode.toLowerCase().includes(ql)) ||
+      (p.plu && p.plu.includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(ql));
+  }).slice(0,8);
+}
+
+function onSearchInput(val) {
+  document.getElementById('search-clear').style.display = val ? 'block' : 'none';
+  var results = searchProducts(val);
+  var box = document.getElementById('search-results');
+  if (!val.trim() || !results.length) { box.classList.remove('visible'); return; }
+  box.classList.add('visible');
+  box.innerHTML = results.map(function(p) {
+    var enc = btoa(unescape(encodeURIComponent(JSON.stringify(p))));
+    return '<div class="search-result-item" onclick="addFromSearch(\'' + enc + '\')">' +
+      '<div><div class="result-name">' + p.name + '</div>' +
+      '<div class="result-meta">' +
+      (p.barcode ? '<span class="result-tag">' + p.barcode + '</span>' : '') +
+      (p.autoBarcode ? '<span class="result-tag">⚡ ' + p.autoBarcode + '</span>' : '') +
+      (p.plu ? '<span class="result-tag plu">📦 ' + p.plu + '</span>' : '') +
+      (p.category ? '<span class="result-tag">' + p.category + '</span>' : '') +
+      '</div></div><div class="result-add-icon">+</div></div>';
+  }).join('');
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-results').classList.remove('visible');
+  document.getElementById('search-clear').style.display = 'none';
+}
+
+function togglePLU() {
+  var panel = document.getElementById('plu-panel');
+  panel.classList.toggle('visible');
+  if (panel.classList.contains('visible')) document.getElementById('plu-input').focus();
+}
+
+function onPLUInput(val) {
+  var box = document.getElementById('plu-results');
+  if (!val.trim()) { box.innerHTML = ''; return; }
+  var matches = products.filter(function(p) { return p.plu && p.plu.startsWith(val.trim()); }).slice(0,5);
+  if (!matches.length) { box.innerHTML = '<div style="font-size:10px;color:var(--text-muted);padding:4px 0">No match for "' + val + '"</div>'; return; }
+  box.innerHTML = matches.map(function(p) {
+    var enc = btoa(unescape(encodeURIComponent(JSON.stringify(p))));
+    return '<div class="search-result-item" style="border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:5px;background:var(--surface2)" onclick="selectPLU(\'' + enc + '\')">' +
+      '<div><div class="result-name">' + p.name + '</div>' +
+      '<div class="result-meta"><span class="result-tag plu">📦 ' + p.plu + '</span>' +
+      (p.category ? '<span class="result-tag">' + p.category + '</span>' : '') +
+      (p.unit ? '<span class="result-tag">' + p.unit + '</span>' : '') +
+      '</div></div><div class="result-add-icon" style="color:var(--purple)">+</div></div>';
+  }).join('');
+}
+
+function selectPLU(enc) {
+  var p = JSON.parse(decodeURIComponent(escape(atob(enc))));
+  promptLooseQty(p);
+}
+
+function promptLooseQty(p) {
+  var qStr = prompt(p.name + '\nCode: ' + p.plu + (p.unit ? '\nUnit: ' + p.unit : '') + '\n\nEnter quantity:');
+  if (qStr === null || qStr.trim() === '') return;
+  var qty = parseFloat(qStr);
+  if (isNaN(qty) || qty <= 0) { showToast('Invalid quantity','error'); return; }
+  addRow(p, qty);
+  document.getElementById('plu-input').value = '';
+  document.getElementById('plu-results').innerHTML = '';
+  document.getElementById('plu-panel').classList.remove('visible');
+}
+
+function openScanner() {
+  document.getElementById('scanner-overlay').classList.add('active');
+  document.getElementById('scanner-last').textContent = '';
+  if (scannerActive) return;
+  scanner = new Html5Qrcode("scanner-container");
+
+  // Try to get the main rear camera (not ultrawide) with autofocus
+  var cameraConstraints = {
+    facingMode: { exact: "environment" },
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    focusMode: { ideal: "continuous" },
+    zoom: { ideal: 1 }
+  };
+
+  scanner.start(
+    cameraConstraints,
+    {
+      fps: 15,
+      qrbox: { width: 260, height: 130 },
+      aspectRatio: 1.777,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+    },
+    function(code) { handleScan(code); },
+    function() {}
+  ).then(function() {
+    scannerActive = true;
+    // Apply continuous autofocus via track constraints after stream starts
+    try {
+      var track = scanner._mediaStream && scanner._mediaStream.getVideoTracks()[0];
+      if (track && track.applyConstraints) {
+        track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function(){});
+      }
+    } catch(e) {}
+  }).catch(function() {
+    // Fallback: try without exact constraint (some phones need this)
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 15, qrbox: { width: 260, height: 130 }, experimentalFeatures: { useBarCodeDetectorIfSupported: true } },
+      function(code) { handleScan(code); },
+      function() {}
+    ).then(function() { scannerActive = true; })
+     .catch(function() { showToast('Camera access denied','error'); closeScanner(); });
+  });
+}
+
+function closeScanner() {
+  document.getElementById('scanner-overlay').classList.remove('active');
+  if (scanner && scannerActive) {
+    scanner.stop().then(function() { scannerActive = false; }).catch(function() { scannerActive = false; });
+  }
+}
+
+function handleScan(code) {
+  if (scanCooldown) return;
+  scanCooldown = true;
+  setTimeout(function() { scanCooldown = false; }, 1200);
+  var product = products.find(function(p) { return p.barcode === code || p.autoBarcode === code; });
+  if (product) {
+    if (navigator.vibrate) navigator.vibrate(60);
+    document.getElementById('scanner-last').textContent = '✅ ' + product.name;
+    openQtyModal(product, true); // true = scanner was open, resume after
+  } else {
+    closeScanner();
+    var name = prompt('Unknown barcode:\n' + code + '\n\nEnter product name (or cancel to skip):');
+    if (name && name.trim()) addRow({ name:name.trim(), barcode:code, autoBarcode:'', plu:'', category:'', unit:'', isLoose:false }, 1);
+    openScanner();
+  }
+}
+
+function addFromSearch(enc) {
+  try {
+    var p = JSON.parse(decodeURIComponent(escape(atob(enc))));
+    if (p.isLoose) { promptLooseQty(p); } else { openQtyModal(p, false); }
+    clearSearch();
+  } catch(e) {}
+}
+
+var _qtyModalProduct = null;
+var _qtyModalResumeScanner = false;
+
+function openQtyModal(product, resumeScanner) {
+  _qtyModalProduct = product;
+  _qtyModalResumeScanner = !!resumeScanner;
+  document.getElementById('qty-modal-name').textContent = product.name;
+  var meta = [];
+  if (product.barcode)     meta.push(product.barcode);
+  if (product.autoBarcode) meta.push('⚡ ' + product.autoBarcode);
+  if (product.category)    meta.push(product.category);
+  document.getElementById('qty-modal-meta').textContent = meta.join(' · ');
+  var inp = document.getElementById('qty-modal-input');
+  inp.value = '1';
+  document.getElementById('qty-modal-notes').value = '';
+  document.getElementById('qty-modal-backdrop').classList.add('active');
+  setTimeout(function() { inp.select(); }, 120);
+}
+
+function confirmQtyModal() {
+  var qty = parseFloat(document.getElementById('qty-modal-input').value);
+  if (isNaN(qty) || qty <= 0) { showToast('Enter a valid quantity','error'); return; }
+  var notes = document.getElementById('qty-modal-notes').value.trim();
+  addRow(_qtyModalProduct, qty, notes);
+  document.getElementById('qty-modal-backdrop').classList.remove('active');
+  if (_qtyModalResumeScanner) {
+    document.getElementById('scanner-last').textContent = '✅ ' + _qtyModalProduct.name + ' × ' + qty;
+  }
+  _qtyModalProduct = null;
+}
+
+function cancelQtyModal() {
+  document.getElementById('qty-modal-backdrop').classList.remove('active');
+  _qtyModalProduct = null;
+  // scanner stays open if it was open — no action needed
+}
+
+function toggleManualAdd() {
+  var p = document.getElementById('manual-add-panel');
+  p.classList.toggle('visible');
+  if (p.classList.contains('visible')) document.getElementById('manual-name').focus();
+}
+
+function addManualItem() {
+  var name = document.getElementById('manual-name').value.trim();
+  var qty = parseFloat(document.getElementById('manual-qty').value) || 1;
+  var barcode = document.getElementById('manual-barcode').value.trim();
+  if (!name) { showToast('Enter product name','error'); return; }
+  addRow({ name:name, barcode:barcode, autoBarcode:'', plu:'', category:'UNKNOWN', unit:'', isLoose:false }, qty);
+  document.getElementById('manual-name').value = '';
+  document.getElementById('manual-qty').value = '1';
+  document.getElementById('manual-barcode').value = '';
+  document.getElementById('manual-add-panel').classList.remove('visible');
+}
+
+function addRow(product, qty, notes) {
+  items.push({
+    id:          Date.now() + Math.random(),
+    name:        product.name,
+    barcode:     product.barcode     || '',
+    autoBarcode: product.autoBarcode || '',
+    plu:         product.plu         || '',
+    category:    product.category    || '',
+    unit:        product.unit        || '',
+    isLoose:     !!product.isLoose,
+    qty:         qty,
+    notes:       notes || '',
+    ts:          new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})
+  });
+  saveItems(); renderItems();
+}
+
+function deleteRow(id) {
+  items = items.filter(function(i) { return i.id !== id; });
+  saveItems(); renderItems();
+}
+
+function saveItems() { localStorage.setItem('shajara_items', JSON.stringify(items)); }
+
+function renderItems() {
+  var list = document.getElementById('items-list');
+  var badge = document.getElementById('item-count-badge');
+  badge.textContent = items.length + ' rows';
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">No items yet</div><div class="empty-sub">Scan a barcode or search to begin</div></div>';
+    return;
+  }
+  var sorted = items.slice().reverse();
+  list.innerHTML = sorted.map(function(item) {
+    return '<div class="item-card' + (item.isLoose ? ' loose' : '') + '">' +
+      '<div class="item-info">' +
+      '<div class="item-name">' + item.name + '</div>' +
+      (item.notes ? '<div class="item-notes">📍 ' + item.notes + '</div>' : '') +
+      '<div class="item-sub">' +
+      (item.barcode ? '<span class="tag">' + item.barcode + '</span>' : '') +
+      (item.autoBarcode ? '<span class="tag">⚡' + item.autoBarcode + '</span>' : '') +
+      (item.plu ? '<span class="tag plu">📦 ' + item.plu + '</span>' : '') +
+      (item.category ? '<span class="tag">' + item.category + '</span>' : '') +
+      '<span class="tag" style="color:var(--text-muted)">' + item.ts + '</span>' +
+      '</div></div>' +
+      '<div class="item-qty">' + (item.qty % 1 === 0 ? item.qty : item.qty.toFixed(2)) + (item.unit ? ' ' + item.unit : '') + '</div>' +
+      '<button class="delete-btn" onclick="deleteRow(' + item.id + ')">×</button>' +
+      '</div>';
+  }).join('');
+}
+
+function renderSyncSummary() {
+  var body = document.getElementById('sync-table-body');
+  var txt = document.getElementById('sync-summary-text');
+  var today = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  txt.textContent = (activeBranch || '—') + ' · ' + today + ' · ' + items.length + ' rows';
+  body.innerHTML = items.length
+    ? items.slice().reverse().map(function(i) {
+        return '<tr><td><span>' + i.name + '</span>' + (i.plu ? '<span class="cat-label">📦 ' + i.plu + '</span>' : '') + '</td>' +
+          '<td style="color:var(--text-muted);font-size:9px">' + (i.category || '—') + '</td>' +
+          '<td>' + (i.qty % 1 === 0 ? i.qty : i.qty.toFixed(2)) + (i.unit ? ' ' + i.unit : '') + '</td></tr>';
+      }).join('')
+    : '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:16px 0">No items counted yet</td></tr>';
+}
+
+async function exportToSheets() {
+  if (!items.length) { showToast('Nothing to export','error'); return; }
+  showToast('⏳ Sending...');
+  try {
+    var res = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ branch: activeBranch || 'Unknown', items: items }) });
+    var data = await res.json();
+    if (data.status === 'ok') showToast('✅ ' + data.rows + ' rows written', 'success');
+    else showToast('❌ ' + (data.message || 'Error'), 'error');
+  } catch(e) { showToast('❌ Failed — check connection','error'); }
+}
+
+function downloadCSV() {
+  if (!items.length) { showToast('Nothing to export','error'); return; }
+  var date = new Date().toLocaleDateString('en-IN');
+  var time = new Date().toLocaleTimeString('en-IN');
+  var rows = [['Branch','Date','Time','Product','Barcode','Auto Barcode','Commodity Code','Group Name','Unit','Qty','Notes']];
+  items.forEach(function(i) { rows.push([activeBranch,date,time,i.name,i.barcode,i.autoBarcode,i.plu,i.category,i.unit,i.qty,i.notes||'']); });
+  var csv = rows.map(function(r) { return r.map(function(v) { return '"' + v + '"'; }).join(','); }).join('\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'shajara-' + activeBranch + '-' + date.replace(/\//g,'-') + '.csv';
+  a.click();
+  showToast('⬇️ CSV downloaded');
+}
+
+function clearSession() {
+  if (!confirm('Clear all counted items for this session?')) return;
+  items = []; saveItems(); renderItems();
+  showToast('Session cleared');
+  goToCount();
+}
+
+var toastTimer;
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + (type || ''); t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2600);
+}
+</script>
+</body>
+</html>
